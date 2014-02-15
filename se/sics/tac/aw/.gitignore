@@ -1,0 +1,16 @@
+/AgentDisplay.class
+/AgentImpl.class
+/Bid.class
+/DummyAgent.class
+/Quote.class
+/TACAgent$AgentTableModel.class
+/TACAgent.class
+/TACConnection.class
+/TACHttpConnection.class
+/TACMessage.class
+/TACMessageReceiver.class
+/TACReader.class
+/Task.class
+/TimeDispatcher$TaskHolder.class
+/TimeDispatcher.class
+/Transaction.class
