@@ -1,0 +1,11 @@
+AWManifest.txt
+README.txt
+RELEASE_NOTES.txt
+agent.conf
+aw0.log
+aw0.log.1
+aw0.log.1.lck
+aw0.log.lck
+aw1.log.1
+aw2.log.1
+*.log
