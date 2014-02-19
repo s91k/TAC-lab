@@ -140,10 +140,12 @@ public class LabAgent extends AgentImpl {
 	private static final boolean DEBUG = false;
 
 	private float[] prices;
+	private int[] premiumValues;
 
 	protected void init(ArgEnumerator args) 
 	{
 		prices = new float[TACAgent.getAuctionNo()];
+		this.premiumValues = new int[5];	//One for each day
 	}
 
 	public void quoteUpdated(Quote quote) 
@@ -253,9 +255,20 @@ public class LabAgent extends AgentImpl {
 				break;
 			case TACAgent.CAT_HOTEL:
 				if (alloc > 0) 
-				{
-					price = 200;
-					prices[i] = 200f;
+				{					
+					if(TACAgent.getAuctionType(i) == TACAgent.TYPE_GOOD_HOTEL)
+					{
+						//Calculate the price based on the premium value	
+						int day = TACAgent.getAuctionDay(i);
+						price = this.premiumValues[day];
+					}
+					else
+					{
+						//Set a base value
+						price = 50;
+					}
+					
+					this.prices[i] = price;
 				}
 				break;
 			case TACAgent.CAT_ENTERTAINMENT:
@@ -305,9 +318,8 @@ public class LabAgent extends AgentImpl {
 			auction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
 			agent.setAllocation(auction, agent.getAllocation(auction) + 1);
 
-			// if the hotel value is greater than 70 we will select the
-			// expensive hotel (type = 1)
-			if (hotel > 70) 
+			// Try to get a good hotel unless the premium value is zero
+			if (hotel > 0) 
 			{
 				type = TACAgent.TYPE_GOOD_HOTEL;
 			} 
@@ -322,6 +334,8 @@ public class LabAgent extends AgentImpl {
 				auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, type, d);
 				log.finer("Adding hotel for day: " + d + " on " + auction);
 				agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+				
+				this.premiumValues[d] += hotel;
 			}
 
 			int eType = -1;
@@ -331,6 +345,17 @@ public class LabAgent extends AgentImpl {
 				auction = bestEntDay(inFlight, outFlight, eType);
 				log.finer("Adding entertainment " + eType + " on " + auction);
 				agent.setAllocation(auction, agent.getAllocation(auction) + 1);
+			}
+		}
+		
+		//Calculate the average premium value
+		for(int i = 0; i < 4; i++)
+		{
+			int auction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_GOOD_HOTEL, i);
+			
+			if(this.agent.getAllocation(auction) > 0)
+			{
+				this.premiumValues[i] /= this.agent.getAllocation(auction);
 			}
 		}
 	}
