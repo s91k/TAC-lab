@@ -159,18 +159,59 @@ public class LabAgent extends AgentImpl {
 
 			if (alloc > 0 && quote.hasHQW(agent.getBid(auction)) && quote.getHQW() < alloc) 
 			{
-				Bid bid = new Bid(auction);
+				int day = TACAgent.getAuctionDay(auction);
+				Bid bid = null;
 				
-				// Can not own anything in hotel auctions...
-				prices[auction] = quote.getAskPrice() + 50;
-				bid.addBidPoint(alloc, prices[auction]);
+				int cheapAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, day);
+				int cheapPrice = (int) agent.getQuote(cheapAuction).getAskPrice();
+				int expensiveAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, day);
+				int expensivePrice = (int) agent.getQuote(expensiveAuction).getAskPrice();
+				
+				Quote cheapQuote = agent.getQuote(cheapAuction);
+				Quote expensiveQuote = agent.getQuote(expensiveAuction);
+
+				//Check whether it's worth bidding on the good hotel
+				if(cheapPrice > expensivePrice - this.premiumValues[day])
+				{
+					if(agent.getQuote(expensiveAuction).isAuctionClosed() == false)
+					{
+						bid = new Bid(expensiveAuction);
+						prices[expensiveAuction] = expensiveQuote.getAskPrice() + 1;
+						bid.addBidPoint(alloc, prices[expensiveAuction]);							
+					}
+					else if(agent.getQuote(cheapAuction).isAuctionClosed() == false)
+					{
+						bid = new Bid(cheapAuction);
+						prices[cheapAuction] = cheapQuote.getAskPrice() + 1;
+						bid.addBidPoint(alloc, prices[cheapAuction]);									
+					}
+
+				}
+				else
+				{
+					if(agent.getQuote(cheapAuction).isAuctionClosed() == false)
+					{
+						bid = new Bid(cheapAuction);
+						prices[cheapAuction] = cheapQuote.getAskPrice() + 1;
+						bid.addBidPoint(alloc, prices[cheapAuction]);									
+					}
+					else if(agent.getQuote(expensiveAuction).isAuctionClosed() == false)
+					{
+						bid = new Bid(expensiveAuction);
+						prices[expensiveAuction] = expensiveQuote.getAskPrice() + 1;
+						bid.addBidPoint(alloc, prices[expensiveAuction]);							
+					}				
+				}
 				
 				if (DEBUG) 
 				{
 					log.finest("submitting bid with alloc=" + agent.getAllocation(auction) + " own=" + agent.getOwn(auction));
 				}
 
-				agent.submitBid(bid);
+				if(bid != null)
+				{
+					agent.submitBid(bid);
+				}
 			}
 		} 
 		else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) 
