@@ -157,7 +157,8 @@ public class LabAgent extends AgentImpl {
 		if(auctionCategory == TACAgent.CAT_FLIGHT)
 		{  
 		int alloc= agent.getAllocation(auction);
-		if(alloc > 0)
+		int own = agent.getOwn(auction);
+		if(alloc > 0 && alloc > own)
 		{
 		//get the seller bid update
                 //check for the optimal pricey comparing currentPrice against previous price
