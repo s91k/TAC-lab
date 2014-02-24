@@ -152,7 +152,28 @@ public class LabAgent extends AgentImpl {
 	{
 		int auction = quote.getAuction();
 		int auctionCategory = TACAgent.getAuctionCategory(auction);
-
+		
+		float currentPrice=quote.getAskPrice();
+		if(auctionCategory == TACAgent.CAT_FLIGHT)
+		{  
+		int alloc= agent.getAllocation(auction);
+		if(alloc > 0)
+		{
+		//get the seller bid update
+                //check for the optimal pricey comparing currentPrice against previous price
+		//if close to optimal price but the ticket.
+                
+		if(currentPrice > prices[auction])
+		{
+		Bid bid=new Bid(auction);
+                bid.addBidPoint(alloc, currentPrice);
+		agent.submitBid(bid);	}
+		}
+		else
+		{
+			prices[auction] = currentPrice;
+		}
+		}
 		if (auctionCategory == TACAgent.CAT_HOTEL) 
 		{
 			int alloc = agent.getAllocation(auction);
@@ -233,7 +254,7 @@ public class LabAgent extends AgentImpl {
 				}
 				
 				agent.submitBid(bid);
-			
+				
 		}
 	}
 
@@ -283,11 +304,10 @@ public class LabAgent extends AgentImpl {
 			switch (TACAgent.getAuctionCategory(i)) 
 			{
 			case TACAgent.CAT_FLIGHT:
-				if (alloc > 0) 
+                              if(alloc>0)
 				{
-					price = 1000;
+				prices[i]=800;
 				}
-				break;
 			case TACAgent.CAT_HOTEL:
 				if (alloc > 0) 
 				{					
