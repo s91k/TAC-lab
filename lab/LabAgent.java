@@ -216,22 +216,16 @@ public class LabAgent extends AgentImpl {
 		} 
 		else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) 
 		{
-			int alloc = agent.getAllocation(auction) - agent.getOwn(auction);
-			
-			if (alloc != 0) 
-			{
-				Bid bid = new Bid(auction);
-				
-				if (alloc < 0)
-				{
-					prices[auction] = 200f - (agent.getGameTime() * 120f) / 720000;
-				}
-				else
-				{
-					prices[auction] = 50f + (agent.getGameTime() * 100f) / 720000;
-				}
-				
-				bid.addBidPoint(alloc, prices[auction]);
+			 Bid bid = new Bid(auction);
+       //for (int t = 0; t < 8; t++)
+       
+       int alloc = agent.getAllocation(auction);
+       int own = agent.getOwn(auction);
+       //selling all the tickets we are allocated                  
+       int rem=alloc-own;
+       if(rem>0)
+          prices[auction]=quote.getAskPrice()+10f;
+       bid.addBidPoint(rem, prices[auction]);
 				
 				if (DEBUG) 
 				{
@@ -239,7 +233,7 @@ public class LabAgent extends AgentImpl {
 				}
 				
 				agent.submitBid(bid);
-			}
+			
 		}
 	}
 
@@ -313,13 +307,22 @@ public class LabAgent extends AgentImpl {
 				}
 				break;
 			case TACAgent.CAT_ENTERTAINMENT:
+                            
 				if (alloc < 0) 
 				{
+                                   // price=quote.getAskPrice()+10f;
+                                    // prices [i]= price;
+                                
 					price = 200;
 					prices[i] = 200f;
+                    
 				} 
-				else if (alloc > 0) 
+		
+                               else if (alloc > 0) 
 				{
+                                   // price=agent.getBid(auction)-10f;
+                                    //prices [i]= price;
+
 					price = 50;
 					prices[i] = 50f;
 				}
