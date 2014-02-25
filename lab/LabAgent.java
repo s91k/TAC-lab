@@ -336,21 +336,21 @@ public class LabAgent extends AgentImpl {
 
 				if (alloc < 0) 
 				{
-					// price=quote.getAskPrice()+10f;
-					// prices [i]= price;
+					price=quote.getAskPrice()+10f;
+					prices [i]= price;
 
-					price = 200;
-					prices[i] = 200f;
+					//price = 200;
+					//prices[i] = 200f;
 
 				} 
 
 				else if (alloc > 0) 
 				{
-					// price=agent.getBid(auction)-10f;
-					//prices [i]= price;
+					price=agent.getBid(auction)-10f;
+					prices [i]= price;
 
-					price = 50;
-					prices[i] = 50f;
+					//price = 50;
+					//prices[i] = 50f;
 				}
 				break;
 			default:
