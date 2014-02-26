@@ -232,8 +232,7 @@ public class LabAgent extends AgentImpl {
 		} 
 		else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) 
 		{
-			  Bid bid = new Bid(auction)
-       
+			  Bid bid = new Bid(auction);
       			 int alloc = agent.getAllocation(auction);
 		       int own = agent.getOwn(auction);
        //selling all the tickets we are allocated                  
@@ -241,7 +240,7 @@ public class LabAgent extends AgentImpl {
        if(rem>0)
        prices[auction]=quote.getAskPrice()+10f;
        if(rem<0)
-       prices[auction]=agent.getBid(auction)-10f; 
+       prices[auction]=quote.getBidPrice()-10f; 
             bid.addBidPoint(rem, prices[auction]);
 
 			if (DEBUG) 
