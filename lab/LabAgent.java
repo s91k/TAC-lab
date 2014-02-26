@@ -191,7 +191,7 @@ public class LabAgent extends AgentImpl {
 			int owned = agent.getOwn(cheapAuction) + agent.getOwn(expensiveAuction);
 			
 			int needed = alloc - owned;
-			int hqw = Math.max(cheapQuote.getHQW() + expensiveQuote.getHQW(), 0);
+			int hqw = Math.max(cheapQuote.getHQW(), 0) + Math.max(expensiveQuote.getHQW(), 0);
 			
 			//Check if some more rooms need to be bought
 			if(needed > 0 && hqw < needed)
@@ -201,16 +201,33 @@ public class LabAgent extends AgentImpl {
 					//If the cheap auction is closed, just keep raising the bid
 					Bid bid = new Bid(expensiveAuction);
 					Bid oldBid = agent.getBid(expensiveAuction);					
-					bid.addBidPoint(needed - hqw, expensivePrice * 1.2f);
-					agent.replaceBid(oldBid, bid);		
+					bid.addBidPoint(needed - hqw, expensivePrice * 1.2f + 100);
+					
+					if(oldBid != null)
+					{
+						agent.submitBid(bid);
+					}
+					else
+					{
+						agent.replaceBid(oldBid, bid);	
+					}					
 				}
 				else if(expensiveQuote.isAuctionClosed())
 				{
 					//If the expensive auction is closed, just keep raising the bid
 					Bid bid = new Bid(cheapAuction);
 					Bid oldBid = agent.getBid(cheapAuction);
-					bid.addBidPoint(needed - hqw, cheapPrice * 1.2f);
-					agent.replaceBid(oldBid, bid);		
+					bid.addBidPoint(needed - hqw, cheapPrice * 1.2f + 100);
+					
+					if(oldBid != null)
+					{
+						agent.submitBid(bid);
+					}
+					else
+					{
+						agent.replaceBid(oldBid, bid);	
+					}
+						
 				}
 				else
 				{
@@ -292,8 +309,35 @@ public class LabAgent extends AgentImpl {
 		if(TACAgent.getAuctionCategory(auction) == TACAgent.CAT_HOTEL && TACAgent.getAuctionType(auction) == TACAgent.TYPE_GOOD_HOTEL)
 		{
 			int cheapAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, TACAgent.getAuctionDay(auction));
+			int expensiveAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_GOOD_HOTEL, TACAgent.getAuctionDay(auction));
+			
+			Quote cheapQuote = agent.getQuote(cheapAuction);	
+			Quote expensiveQuote = agent.getQuote(expensiveAuction);				
+			
 			agent.setAllocation(cheapAuction, agent.getAllocation(auction));
 			agent.setAllocation(auction, 0);
+			
+			//Make a new bid in case the cheap auction closes on the next update
+			int alloc = agent.getAllocation(cheapAuction) + agent.getAllocation(expensiveAuction);
+			int owned = agent.getOwn(cheapAuction) + agent.getOwn(expensiveAuction);
+			
+			int needed = alloc - owned;
+			int hqw = Math.max(cheapQuote.getHQW(), 0) + Math.max(expensiveQuote.getHQW(), 0);			
+	
+			int cheapPrice = (int) cheapQuote.getAskPrice();
+			
+			Bid bid = new Bid(cheapAuction);
+			Bid oldBid = agent.getBid(cheapAuction);
+			bid.addBidPoint(needed - hqw, cheapPrice * 1.2f + 100);
+			
+			if(oldBid != null)
+			{
+				agent.submitBid(bid);
+			}
+			else
+			{
+				agent.replaceBid(oldBid, bid);	
+			}			
 		}
 	}
 
