@@ -139,19 +139,40 @@ public class LabAgent extends AgentImpl {
 
 	private float[] prices;
 	private int[] premiumValues;
+	private boolean[] activeClients;
+	private long startTime;
 
 	protected void init(ArgEnumerator args) 
 	{
-		prices = new float[TACAgent.getAuctionNo()];
+		this.prices = new float[TACAgent.getAuctionNo()];
 		this.premiumValues = new int[5];	//One for each day
+		this.activeClients = new boolean[8];
+		
+		for(int i = 0; i < 8; i++)
+		{
+			this.activeClients[i] = true;
+		}
+		
+		startTime = System.currentTimeMillis();
 	}
 	
 	public void quoteUpdated(Quote quote) 
 	{
+		//Update the allocation
+		for(int i = 0; i < 8; i++)
+		{
+			if(this.activeClients[i] == true && this.estimatedProfitForClient(i) <= 0)
+			{
+				this.removeClientAllocation(i);
+				this.activeClients[i] = false;
+			}
+		}
+		
+		//Update the bids
 		int auction = quote.getAuction();
 		int auctionCategory = TACAgent.getAuctionCategory(auction);
 
-		if(auctionCategory == TACAgent.CAT_FLIGHT)
+		if(auctionCategory == TACAgent.CAT_FLIGHT && System.currentTimeMillis() - this.startTime > 80000)
 		{  
 			float currentPrice=quote.getAskPrice();
 			int alloc= agent.getAllocation(auction);
@@ -175,7 +196,7 @@ public class LabAgent extends AgentImpl {
 			}
 			
 		}
-		if (auctionCategory == TACAgent.CAT_HOTEL && agent.getAllocation(auction) > 0) 
+		if (auctionCategory == TACAgent.CAT_HOTEL && agent.getAllocation(auction) > 0 && System.currentTimeMillis() - this.startTime > 80000) 
 		{
 			int day = TACAgent.getAuctionDay(auction);
 
@@ -198,34 +219,40 @@ public class LabAgent extends AgentImpl {
 			{
 				if(cheapQuote.isAuctionClosed())
 				{
-					//If the cheap auction is closed, just keep raising the bid
-					Bid bid = new Bid(expensiveAuction);
-					Bid oldBid = agent.getBid(expensiveAuction);					
-					bid.addBidPoint(needed - hqw, expensivePrice * 1.2f + 100);
-					
-					if(oldBid != null)
+					if(expensiveQuote.isAuctionClosed() == false)
 					{
-						agent.submitBid(bid);
+						//If the cheap auction is closed, just keep raising the bid
+						Bid bid = new Bid(expensiveAuction);
+						Bid oldBid = agent.getBid(expensiveAuction);					
+						bid.addBidPoint(needed - hqw, expensivePrice * 1.2f + 100);
+						
+						if(oldBid == null)
+						{
+							agent.submitBid(bid);
+						}
+						else
+						{
+							agent.replaceBid(oldBid, bid);	
+						}	
 					}
-					else
-					{
-						agent.replaceBid(oldBid, bid);	
-					}					
 				}
 				else if(expensiveQuote.isAuctionClosed())
 				{
-					//If the expensive auction is closed, just keep raising the bid
-					Bid bid = new Bid(cheapAuction);
-					Bid oldBid = agent.getBid(cheapAuction);
-					bid.addBidPoint(needed - hqw, cheapPrice * 1.2f + 100);
-					
-					if(oldBid != null)
+					if(cheapQuote.isAuctionClosed() == false)
 					{
-						agent.submitBid(bid);
-					}
-					else
-					{
-						agent.replaceBid(oldBid, bid);	
+						//If the expensive auction is closed, just keep raising the bid
+						Bid bid = new Bid(cheapAuction);
+						Bid oldBid = agent.getBid(cheapAuction);
+						bid.addBidPoint(needed - hqw, cheapPrice * 1.2f + 100);
+						
+						if(oldBid == null)
+						{
+							agent.submitBid(bid);
+						}
+						else
+						{
+							agent.replaceBid(oldBid, bid);	
+						}
 					}
 						
 				}
@@ -235,13 +262,13 @@ public class LabAgent extends AgentImpl {
 					if(cheapPrice < expensivePrice - this.premiumValues[day])
 					{
 						Bid bid = new Bid(cheapAuction);
-						bid.addBidPoint(needed - hqw, cheapPrice + 100);
+						bid.addBidPoint(Math.max(needed - hqw, 0), cheapPrice + 100);
 						agent.submitBid(bid);						
 					}
 					else
 					{
 						Bid bid = new Bid(expensiveAuction);
-						bid.addBidPoint(needed - hqw, expensivePrice + 100);
+						bid.addBidPoint(Math.max(needed - hqw, 0), expensivePrice + 100);
 						agent.submitBid(bid);						
 					}
 				}
@@ -249,20 +276,20 @@ public class LabAgent extends AgentImpl {
 		} 
 		else if (auctionCategory == TACAgent.CAT_ENTERTAINMENT) 
 		{
-		           Bid bid = new Bid(auction);
-      		           int alloc = agent.getAllocation(auction);
-		           int own = agent.getOwn(auction);
+			Bid bid = new Bid(auction);
+			int alloc = agent.getAllocation(auction);
+			int own = agent.getOwn(auction);
 			prices[auction]=0;
-                                  //selling all the tickets we are allocated                  
-                                  int reminder=alloc-own;
+			//selling all the tickets we are allocated                  
+			int reminder=alloc-own;
 			float ask_price,bid_price;
 			ask_price=quote.getAskPrice();
 			bid_price=quote.getBidPrice();
-                                  if(reminder>0)
-                                  prices[auction]=ask_price+10f;
-                                  if(reminder<0)
-                                  prices[auction]=bid_price-10f; 
-                                  bid.addBidPoint(reminder, prices[auction]);
+			if(reminder>0)
+				prices[auction]=ask_price+10f;
+			if(reminder<0)
+				prices[auction]=bid_price-10f; 
+			bid.addBidPoint(reminder, prices[auction]);
 
 			if (DEBUG) 
 			{
@@ -301,6 +328,8 @@ public class LabAgent extends AgentImpl {
 
 		calculateAllocation();
 		sendBids();
+		
+		this.startTime = System.currentTimeMillis();
 	}
 
 	public void gameStopped() {
@@ -321,27 +350,30 @@ public class LabAgent extends AgentImpl {
 			agent.setAllocation(cheapAuction, agent.getAllocation(auction));
 			agent.setAllocation(auction, 0);
 			
-			//Make a new bid in case the cheap auction closes on the next update
-			int alloc = agent.getAllocation(cheapAuction) + agent.getAllocation(expensiveAuction);
-			int owned = agent.getOwn(cheapAuction) + agent.getOwn(expensiveAuction);
-			
-			int needed = alloc - owned;
-			int hqw = Math.max(cheapQuote.getHQW(), 0) + Math.max(expensiveQuote.getHQW(), 0);			
-	
-			int cheapPrice = (int) cheapQuote.getAskPrice();
-			
-			Bid bid = new Bid(cheapAuction);
-			Bid oldBid = agent.getBid(cheapAuction);
-			bid.addBidPoint(needed - hqw, cheapPrice * 1.2f + 100);
-			
-			if(oldBid != null)
+			if(cheapQuote.isAuctionClosed())
 			{
-				agent.submitBid(bid);
+				//Make a new bid in case the cheap auction closes on the next update
+				int alloc = agent.getAllocation(cheapAuction) + agent.getAllocation(expensiveAuction);
+				int owned = agent.getOwn(cheapAuction) + agent.getOwn(expensiveAuction);
+				
+				int needed = alloc - owned;
+				int hqw = Math.max(cheapQuote.getHQW(), 0) + Math.max(expensiveQuote.getHQW(), 0);			
+		
+				int cheapPrice = (int) cheapQuote.getAskPrice();
+				
+				Bid bid = new Bid(cheapAuction);
+				Bid oldBid = agent.getBid(cheapAuction);
+				bid.addBidPoint(Math.max(needed - hqw, 0), cheapPrice * 1.2f + 100);
+				
+				if(oldBid == null)
+				{
+					agent.submitBid(bid);
+				}
+				else
+				{
+					agent.replaceBid(oldBid, bid);	
+				}	
 			}
-			else
-			{
-				agent.replaceBid(oldBid, bid);	
-			}			
 		}
 	}
 
@@ -362,22 +394,24 @@ public class LabAgent extends AgentImpl {
 			case TACAgent.CAT_HOTEL:
 				if (alloc > 0) 
 				{
-					Bid bid = new Bid(i);
+					//Bid bid = new Bid(i);
 					
 					if(TACAgent.getAuctionType(i) == TACAgent.TYPE_GOOD_HOTEL)
 					{
 						//Calculate the price based on the premium value	
 						int day = TACAgent.getAuctionDay(i);
 						this.prices[i] = this.premiumValues[day];
-						bid.addBidPoint(alloc, this.prices[i]);
+						//bid.addBidPoint(alloc, this.prices[i]);
 					}
 					else
 					{
 						this.prices[i] = 0;
-						bid.addBidPoint(alloc, this.prices[i]);
+						//bid.addBidPoint(alloc, this.prices[i]);
 					}
 					
-					this.agent.submitBid(bid);
+					//this.agent.submitBid(bid);
+					
+					
 				}
 				break;
 			case TACAgent.CAT_ENTERTAINMENT:
@@ -504,6 +538,90 @@ public class LabAgent extends AgentImpl {
 		}
 
 		return -1;
+	}
+	
+	//Estimate the utility value minus the cost for a given client
+	private int estimatedProfitForClient(int client)
+	{
+		//Assuming average utility
+		int utility = 1300;
+		int cost = 0;
+		
+		//Cost of hotels
+		int inFlight = agent.getClientPreference(client, TACAgent.ARRIVAL);
+		int outFlight = agent.getClientPreference(client, TACAgent.DEPARTURE);
+
+		for (int d = inFlight; d < outFlight; d++) 
+		{
+			int cheapAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, d);
+			int expensiveAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_GOOD_HOTEL, d);
+			
+			Quote cheapQuote = agent.getQuote(cheapAuction);	
+			Quote expensiveQuote = agent.getQuote(expensiveAuction);		
+			
+			cost += (int) Math.min(cheapQuote.getAskPrice(), expensiveQuote.getAskPrice());
+		}
+		
+		//Cost of flights
+		int inFlightAuction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+		int outFlightAuction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+		
+		Quote inFlightQuote = agent.getQuote(inFlightAuction);
+		Quote outFlightQuote = agent.getQuote(outFlightAuction);
+		
+		if(agent.getOwn(inFlightAuction) > 0)
+		{
+			cost += inFlightQuote.getAskPrice();
+		}
+		else
+		{
+			cost += 150;
+		}
+		
+		if(agent.getOwn(outFlightAuction) > 0)
+		{
+			cost += outFlightQuote.getAskPrice();
+		}
+		else
+		{
+			cost += 150;
+		}	
+		
+		//Entertainment cost is skipped since tickets can be sold for profit
+		
+		return utility - cost;
+	}
+	
+	private void removeClientAllocation(int client)
+	{
+		//Remove flight allocation
+		int inFlight = agent.getClientPreference(client, TACAgent.ARRIVAL);
+		int outFlight = agent.getClientPreference(client, TACAgent.DEPARTURE);
+		
+		int inFlightAuction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_INFLIGHT, inFlight);
+		int outFlightAuction = TACAgent.getAuctionFor(TACAgent.CAT_FLIGHT, TACAgent.TYPE_OUTFLIGHT, outFlight);
+		
+		agent.setAllocation(inFlightAuction, Math.max(agent.getAllocation(inFlightAuction) - 1, 0));
+		agent.setAllocation(outFlightAuction, Math.max(agent.getAllocation(outFlightAuction) - 1, 0));		
+
+		//Remove hotel allocation
+		for (int d = inFlight; d < outFlight; d++) 
+		{
+			int cheapAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_CHEAP_HOTEL, d);
+			int expensiveAuction = TACAgent.getAuctionFor(TACAgent.CAT_HOTEL, TACAgent.TYPE_GOOD_HOTEL, d);
+			
+			agent.setAllocation(cheapAuction, Math.max(agent.getAllocation(cheapAuction) - 1, 0));
+			agent.setAllocation(expensiveAuction, Math.max(agent.getAllocation(expensiveAuction) - 1, 0));	
+		}	
+		
+		//Remove entertainment allocation
+		int eType = -1;
+
+		while((eType = nextEntType(client, eType)) > 0) 
+		{
+			int auction = bestEntDay(inFlight, outFlight, eType);
+			agent.setAllocation(auction, Math.max(agent.getAllocation(auction) - 1, 0));
+		}		
 	}
 
 
